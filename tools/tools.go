@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"simple-agent/logger"
+
+	"go.uber.org/zap"
 )
 
 // ToolExecutor 工具执行器接口
@@ -42,7 +46,7 @@ func ExecuteTools(ctx context.Context, tools []Tool, executor ToolExecutor) []To
 
 // ExtractTools 从模型回复中提取工具调用
 func ExtractTools(content string) ([]Tool, bool) {
-	fmt.Printf("\u001b[96m调试\u001b[0m: 开始提取工具调用，内容长度: %d\n", len(content))
+	logger.Info("开始提取工具调用", zap.Int("content_length", len(content)))
 
 	// 查找工具调用的JSON格式 - 支持多种格式
 	var jsonStr string
@@ -52,7 +56,7 @@ func ExtractTools(content string) ([]Tool, bool) {
 		end := strings.Index(content[start:], "```")
 		if end != -1 {
 			jsonStr = strings.TrimSpace(content[start+7 : start+end])
-			fmt.Printf("\u001b[96m调试\u001b[0m: 找到```json格式的JSON\n")
+			logger.Info("找到```json格式的JSON")
 		}
 	}
 
@@ -62,7 +66,7 @@ func ExtractTools(content string) ([]Tool, bool) {
 			end := strings.Index(content[start:], "```")
 			if end != -1 {
 				jsonStr = strings.TrimSpace(content[start+3 : start+end])
-				fmt.Printf("\u001b[96m调试\u001b[0m: 找到```格式的JSON\n")
+				logger.Info("找到```格式的JSON")
 			}
 		}
 	}
@@ -88,7 +92,7 @@ func ExtractTools(content string) ([]Tool, bool) {
 			}
 			if end > start {
 				jsonStr = strings.TrimSpace(content[start:end])
-				fmt.Printf("\u001b[96m调试\u001b[0m: 找到JSON数组格式\n")
+				logger.Info("找到JSON数组格式")
 			}
 		}
 	}
@@ -113,35 +117,35 @@ func ExtractTools(content string) ([]Tool, bool) {
 			}
 			if end > start {
 				jsonStr = strings.TrimSpace(content[start:end])
-				fmt.Printf("\u001b[96m调试\u001b[0m: 找到单个JSON对象格式\n")
+				logger.Info("找到单个JSON对象格式")
 			}
 		}
 	}
 
 	if jsonStr == "" {
-		fmt.Printf("\u001b[96m调试\u001b[0m: 未找到任何JSON格式的工具调用\n")
+		logger.Info("未找到任何JSON格式的工具调用")
 		return nil, false
 	}
 
-	fmt.Printf("\u001b[96m调试\u001b[0m: 提取到的JSON字符串: %s\n", jsonStr)
+	logger.Info("提取到的JSON字符串", zap.String("json_string", jsonStr))
 
 	// 解析JSON
 	var tools []Tool
 	err := json.Unmarshal([]byte(jsonStr), &tools)
 	if err != nil {
-		fmt.Printf("\u001b[96m调试\u001b[0m: 解析JSON数组失败，尝试解析单个工具: %v\n", err)
+		logger.Error("解析JSON数组失败，尝试解析单个工具", zap.Error(err))
 		// 尝试解析单个工具
 		var singleTool Tool
 		err = json.Unmarshal([]byte(jsonStr), &singleTool)
 		if err != nil {
-			fmt.Printf("\u001b[91m错误\u001b[0m: 无法解析工具调用: %s\n", err)
-			fmt.Printf("原始JSON: %s\n", jsonStr)
+			logger.Error("无法解析工具调用", zap.Error(err))
+			logger.Info("原始JSON", zap.String("original_json", jsonStr))
 			return nil, false
 		}
 		tools = []Tool{singleTool}
-		fmt.Printf("\u001b[96m调试\u001b[0m: 成功解析单个工具\n")
+		logger.Info("成功解析单个工具")
 	} else {
-		fmt.Printf("\u001b[96m调试\u001b[0m: 成功解析工具数组，数量: %d\n", len(tools))
+		logger.Info("成功解析工具数组", zap.Int("tool_count", len(tools)))
 	}
 
 	return tools, len(tools) > 0

@@ -6,17 +6,23 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"simple-agent/logger"
 	"simple-agent/tools"
 	"strings"
 	"syscall"
 
 	"github.com/chzyer/readline"
+	"go.uber.org/zap"
 )
 
 // 全局readline实例
 var rl *readline.Instance
 
 func main() {
+	// 初始化日志系统
+	logger.Init()
+	defer logger.Sync()
+
 	// 创建一个可取消的上下文
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -26,6 +32,7 @@ func main() {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigCh
+		logger.Info("接收到退出信号，正在退出...")
 		fmt.Println("\n接收到退出信号，正在退出...")
 		if rl != nil {
 			rl.Close()
@@ -37,6 +44,7 @@ func main() {
 	var err error
 	rl, err = readline.New("")
 	if err != nil {
+		logger.Fatal("初始化readline失败", zap.Error(err))
 		fmt.Printf("初始化readline失败: %v\n", err)
 		os.Exit(1)
 	}
@@ -45,6 +53,7 @@ func main() {
 	// 从环境变量获取API密钥
 	apiKey := os.Getenv("ZHIPU_API_KEY")
 	if apiKey == "" {
+		logger.Error("未设置ZHIPU_API_KEY环境变量")
 		fmt.Println("错误: 未设置ZHIPU_API_KEY环境变量")
 		fmt.Println("请设置环境变量: export ZHIPU_API_KEY=your_api_key")
 		os.Exit(1)
@@ -61,6 +70,7 @@ func main() {
 	agent := NewAdvancedAgent(config, getUserInput)
 
 	// 显示欢迎信息
+	logger.Info("程序启动成功")
 	fmt.Println("\n欢迎使用智谱AI GLM-4.5模型驱动的智能助手！")
 	fmt.Println("该模型具有强大的推理能力、稳定的代码生成和多工具协同处理能力，同时运行速度更快。")
 	fmt.Println("输入您的问题或指令，输入'exit'或'quit'退出。")
@@ -68,6 +78,7 @@ func main() {
 	// 运行代理
 	err = agent.Run(ctx)
 	if err != nil {
+		logger.Error("程序运行出错", zap.Error(err))
 		fmt.Printf("错误: %v\n", err)
 		os.Exit(1)
 	}
