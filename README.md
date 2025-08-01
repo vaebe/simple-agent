@@ -1,6 +1,6 @@
 # Simple Agent
 
-- 参考 https://ampcode.com/how-to-build-an-agent 实现
+- 参考 <https://ampcode.com/how-to-build-an-agent> 实现
 - 这是一个基于智谱AI GLM-4.5-Flash模型的智能助手
 
 ## 🚀 主要特性
@@ -14,6 +14,7 @@
 ## 📋 功能列表
 
 ### 核心能力
+
 - 智能问答和对话
 - 复杂推理和问题解决
 - 代码生成和调试
@@ -21,6 +22,7 @@
 - Shell命令执行（带安全检查）
 
 ### 工具支持
+
 1. **文件操作工具**
    - `list`: 列出目录内容
    - `read`: 读取文件内容
@@ -32,28 +34,33 @@
 ## 🔧 安装和配置
 
 ### 环境要求
+
 - Go 1.16 或更高版本
 - 智谱AI API密钥
 
 ### 安装步骤
 
 1. 克隆项目
+
 ```bash
-git clone <repository-url>
+git clone git@github.com:vaebe/simple-agent.git
 cd simple-agent
 ```
 
 2. 安装依赖
+
 ```bash
 go mod tidy
 ```
 
 3. 设置API密钥
+
 ```bash
 export ZHIPU_API_KEY=your_api_key_here
 ```
 
 4. 运行程序
+
 ```bash
 go run .
 ```
@@ -61,11 +68,13 @@ go run .
 ## 🛡️ 安全特性
 
 ### 文件操作安全
+
 - 禁止访问上级目录（`..`）
 - 禁止访问绝对路径（`/`开头）
 - 文件读取大小限制（最大1MB）
 
 ### Shell命令安全
+
 - 禁止执行危险命令（`rm -rf`、`sudo`、`su`等）
 - 命令执行超时限制（30秒）
 - 输入验证和清理
@@ -73,13 +82,15 @@ go run .
 ## 📖 使用示例
 
 ### 基本对话
-```
+
+```bash
 你: 你好，请介绍一下你自己
 GLM-4.5-Flash: 你好！我是基于智谱AI GLM-4.5-Flash模型的智能助手...
 ```
 
 ### 文件操作
-```
+
+```bash
 你: 请列出当前目录的内容
 GLM-4.5-Flash: 我将使用文件操作工具来列出当前目录的内容。
 
@@ -92,37 +103,6 @@ GLM-4.5-Flash: 我将使用文件操作工具来列出当前目录的内容。
   }
 }
 ```
-
-### Shell命令
-```
-你: 请查看当前系统的内存使用情况
-GLM-4.5-Flash: 我将执行命令来查看系统内存使用情况。
-
-[工具调用]
-{
-  "type": "shell_command",
-  "name": "execute",
-  "args": {
-    "command": "free -h"
-  }
-}
-```
-
-## 📝 配置说明
-
-### 环境变量
-- `ZHIPU_API_KEY`: 智谱AI API密钥（必需）
-
-### 系统提示词
-可以在 `message.go` 中修改 `DEFAULT_SYSTEM_PROMPT` 来自定义系统行为。
-
-## 🤝 贡献
-
-欢迎提交Issue和Pull Request来改进这个项目！
-
-## 📄 许可证
-
-MIT License
 
 ## 🔗 相关链接
 
