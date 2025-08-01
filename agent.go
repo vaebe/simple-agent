@@ -518,13 +518,10 @@ func (a *AdvancedAgent) executeShellCommand(tool Tool) ToolCallResponse {
 		}
 	}
 
-	// 创建命令
-	cmd := exec.Command("sh", "-c", cmdStr)
-
 	// 设置超时上下文
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	cmd = exec.CommandContext(ctx, "sh", "-c", cmdStr)
+	cmd := exec.CommandContext(ctx, "sh", "-c", cmdStr)
 
 	// 获取输出
 	output, err := cmd.CombinedOutput()

@@ -45,7 +45,7 @@ func main() {
 	// 显示欢迎信息
 	fmt.Println("\n欢迎使用智谱AI GLM-4.5模型驱动的智能助手！")
 	fmt.Println("该模型具有强大的推理能力、稳定的代码生成和多工具协同处理能力，同时运行速度更快。")
-	fmt.Println("输入您的问题或指令，输入'exit'或'quit'退出。\n")
+	fmt.Println("输入您的问题或指令，输入'exit'或'quit'退出。")
 
 	// 运行代理
 	err := agent.Run(ctx)
