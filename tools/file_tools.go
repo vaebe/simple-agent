@@ -9,7 +9,7 @@ import (
 )
 
 // ExecuteFileOperation 执行文件操作
-func ExecuteFileOperation(tool Tool, mcpClient interface{}) ToolCallResponse {
+func ExecuteFileOperation(tool Tool) ToolCallResponse {
 	switch tool.Name {
 	case "list":
 		// 获取目录参数

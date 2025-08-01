@@ -26,7 +26,7 @@ type AdvancedAgent struct {
 // 实现ToolExecutor接口
 func (a *AdvancedAgent) ExecuteFileOperation(tool tools.Tool) tools.ToolCallResponse {
 	// 直接调用tools包中的文件操作实现
-	return tools.ExecuteFileOperation(tool, nil)
+	return tools.ExecuteFileOperation(tool)
 }
 
 func (a *AdvancedAgent) ExecuteShellCommand(tool tools.Tool) tools.ToolCallResponse {
