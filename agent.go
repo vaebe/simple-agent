@@ -111,15 +111,11 @@ func (a *AdvancedAgent) Run(ctx context.Context) error {
 	fmt.Println("可用工具: " + strings.Join(a.config.Tools, ", "))
 
 	for {
-		// 提示用户输入
-		fmt.Print("\u001b[94m你\u001b[0m: ")
+		// 获取用户输入（readline已经处理了提示符）
 		userInput, ok := a.getUserMessage()
 		if !ok {
 			break
 		}
-
-		// 清除当前行，重新打印用户输入（用于更好的显示效果）
-		fmt.Printf("\r\u001b[94m你\u001b[0m: %s\n", userInput)
 
 		// 检查是否是工具调用
 		if strings.HasPrefix(userInput, "/tool") {

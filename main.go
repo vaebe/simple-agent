@@ -1,15 +1,20 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"simple-agent/tools"
 	"strings"
 	"syscall"
+
+	"github.com/chzyer/readline"
 )
+
+// 全局readline实例
+var rl *readline.Instance
 
 func main() {
 	// 创建一个可取消的上下文
@@ -22,8 +27,20 @@ func main() {
 	go func() {
 		<-sigCh
 		fmt.Println("\n接收到退出信号，正在退出...")
+		if rl != nil {
+			rl.Close()
+		}
 		cancel()
 	}()
+
+	// 初始化readline实例
+	var err error
+	rl, err = readline.New("")
+	if err != nil {
+		fmt.Printf("初始化readline失败: %v\n", err)
+		os.Exit(1)
+	}
+	defer rl.Close()
 
 	// 从环境变量获取API密钥
 	apiKey := os.Getenv("ZHIPU_API_KEY")
@@ -49,7 +66,7 @@ func main() {
 	fmt.Println("输入您的问题或指令，输入'exit'或'quit'退出。")
 
 	// 运行代理
-	err := agent.Run(ctx)
+	err = agent.Run(ctx)
 	if err != nil {
 		fmt.Printf("错误: %v\n", err)
 		os.Exit(1)
@@ -58,9 +75,26 @@ func main() {
 
 // getUserInput 从标准输入获取用户输入
 func getUserInput() (string, bool) {
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
+	if rl == nil {
+		fmt.Printf("readline实例未初始化\n")
+		return "", false
+	}
+
+	// 设置提示符
+	rl.SetPrompt("\u001b[94m你\u001b[0m: ")
+
+	// 读取输入
+	input, err := rl.Readline()
 	if err != nil {
+		if err == readline.ErrInterrupt {
+			// Ctrl+C 退出
+			return "", false
+		}
+		if err == io.EOF {
+			// EOF (Ctrl+D) 退出
+			return "", false
+		}
+		fmt.Printf("读取输入失败: %v\n", err)
 		return "", false
 	}
 
