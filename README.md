@@ -1,7 +1,7 @@
 # Simple Agent
 
 - 参考 <https://ampcode.com/how-to-build-an-agent> 实现
-- 这是一个基于智谱AI GLM-4.5-Flash模型的智能助手
+- 这是一个基于智谱AI GLM-4.5-Flash模型的智能助手，它不是很聪明又时候会卡住！
 
 ## 🚀 主要特性
 
