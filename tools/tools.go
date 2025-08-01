@@ -46,7 +46,7 @@ func ExecuteTools(ctx context.Context, tools []Tool, executor ToolExecutor) []To
 
 // ExtractTools 从模型回复中提取工具调用
 func ExtractTools(content string) ([]Tool, bool) {
-	logger.Info("开始提取工具调用", zap.Int("content_length", len(content)))
+	logger.Debug("开始提取工具调用", zap.Int("content_length", len(content)))
 
 	// 查找工具调用的JSON格式 - 支持多种格式
 	var jsonStr string
@@ -56,7 +56,7 @@ func ExtractTools(content string) ([]Tool, bool) {
 		end := strings.Index(content[start:], "```")
 		if end != -1 {
 			jsonStr = strings.TrimSpace(content[start+7 : start+end])
-			logger.Info("找到```json格式的JSON")
+			logger.Debug("找到```json格式的JSON")
 		}
 	}
 
@@ -66,7 +66,7 @@ func ExtractTools(content string) ([]Tool, bool) {
 			end := strings.Index(content[start:], "```")
 			if end != -1 {
 				jsonStr = strings.TrimSpace(content[start+3 : start+end])
-				logger.Info("找到```格式的JSON")
+				logger.Debug("找到```格式的JSON")
 			}
 		}
 	}
@@ -169,7 +169,7 @@ func HandleToolCall(ctx context.Context, command string, executor ToolExecutor) 
 
 		err := json.Unmarshal([]byte(argStr), &args)
 		if err != nil {
-			fmt.Printf("错误: 无法解析参数: %s\n", err)
+			logger.Error("tools 错误: 无法解析参数", zap.Error(err))
 			return
 		}
 	}
@@ -185,9 +185,10 @@ func HandleToolCall(ctx context.Context, command string, executor ToolExecutor) 
 	response := ExecuteTool(ctx, tool, executor)
 
 	// 打印结果
-	fmt.Printf("\u001b[93m工具结果\u001b[0m: %s\n", response.Result)
+	logger.Debug("tools 工具结果", zap.String("result", response.Result))
+
 	if response.Error != "" {
-		fmt.Printf("\u001b[91m错误\u001b[0m: %s\n", response.Error)
+		logger.Error("tools 调用错误", zap.String("error", response.Error))
 	}
 }
 

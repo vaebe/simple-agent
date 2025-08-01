@@ -33,7 +33,6 @@ func main() {
 	go func() {
 		<-sigCh
 		logger.Info("接收到退出信号，正在退出...")
-		fmt.Println("\n接收到退出信号，正在退出...")
 		if rl != nil {
 			rl.Close()
 		}
@@ -45,7 +44,6 @@ func main() {
 	rl, err = readline.New("")
 	if err != nil {
 		logger.Fatal("初始化readline失败", zap.Error(err))
-		fmt.Printf("初始化readline失败: %v\n", err)
 		os.Exit(1)
 	}
 	defer rl.Close()
@@ -53,9 +51,7 @@ func main() {
 	// 从环境变量获取API密钥
 	apiKey := os.Getenv("ZHIPU_API_KEY")
 	if apiKey == "" {
-		logger.Error("未设置ZHIPU_API_KEY环境变量")
-		fmt.Println("错误: 未设置ZHIPU_API_KEY环境变量")
-		fmt.Println("请设置环境变量: export ZHIPU_API_KEY=your_api_key")
+		logger.Error("未设置 ZHIPU_API_KEY 环境变量, 请设置环境变量: export ZHIPU_API_KEY=your_api_key")
 		os.Exit(1)
 	}
 
@@ -70,16 +66,12 @@ func main() {
 	agent := NewAdvancedAgent(config, getUserInput)
 
 	// 显示欢迎信息
-	logger.Info("程序启动成功")
-	fmt.Println("\n欢迎使用智谱AI GLM-4.5模型驱动的智能助手！")
-	fmt.Println("该模型具有强大的推理能力、稳定的代码生成和多工具协同处理能力，同时运行速度更快。")
-	fmt.Println("输入您的问题或指令，输入'exit'或'quit'退出。")
+	fmt.Println("\033[32m \n欢迎使用 VCode 智能助手， 输入您的问题或指令，输入'exit'或'quit'退出。 \033[0m")
 
 	// 运行代理
 	err = agent.Run(ctx)
 	if err != nil {
 		logger.Error("程序运行出错", zap.Error(err))
-		fmt.Printf("错误: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -87,7 +79,7 @@ func main() {
 // getUserInput 从标准输入获取用户输入
 func getUserInput() (string, bool) {
 	if rl == nil {
-		fmt.Printf("readline实例未初始化\n")
+		logger.Debug("readline实例未初始化")
 		return "", false
 	}
 
@@ -105,7 +97,8 @@ func getUserInput() (string, bool) {
 			// EOF (Ctrl+D) 退出
 			return "", false
 		}
-		fmt.Printf("读取输入失败: %v\n", err)
+		logger.Error("读取输入失败", zap.Error(err))
+
 		return "", false
 	}
 

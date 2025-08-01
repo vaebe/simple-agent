@@ -54,7 +54,7 @@ func Init() {
     teeCore := zapcore.NewTee(fileCore, consoleCore)
     Logger = zap.New(teeCore, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
 
-    Logger.Info("日志系统初始化完成")
+    Logger.Debug("日志系统初始化完成")
 }
 
 // Sync 同步日志

@@ -20,8 +20,7 @@ type Message struct {
 const GLM_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
 
 // 预定义的系统提示词
-const DEFAULT_SYSTEM_PROMPT = `你是一个智能助手，由智谱AI的GLM-4.5-Flash模型提供支持。
-你拥有强大的推理能力、稳定的代码生成和多工具协同处理能力，同时具备显著的运行速度优势。
+const DEFAULT_SYSTEM_PROMPT = `你是一个智能助手，你拥有强大的推理能力、稳定的代码生成和多工具协同处理能力，同时具备显著的运行速度优势。
 你支持最长128K的上下文处理，可高效应对长文本理解、多轮对话连续性和结构化内容生成等复杂任务。
 
 你可以回答用户的问题，也可以使用工具来完成特定任务。
@@ -113,7 +112,6 @@ func NewAdvancedAgent(config AgentConfig, getUserMessage func() (string, bool)) 
 
 // Run 运行高级代理的主循环
 func (a *AdvancedAgent) Run(ctx context.Context) error {
-	fmt.Println("与GLM-4.5-Flash聊天 (使用'ctrl-c'退出)")
 	fmt.Println("可用工具: " + strings.Join(a.config.Tools, ", "))
 
 	for {
@@ -137,7 +135,7 @@ func (a *AdvancedAgent) Run(ctx context.Context) error {
 		// 调用模型获取回复
 		message, err := a.runInference(ctx, a.conversation)
 		if err != nil {
-			fmt.Printf("\u001b[91m错误\u001b[0m: %v\n", err)
+			logger.Error("调用模型获取回复错误", zap.Error(err))
 			continue
 		}
 
@@ -149,12 +147,12 @@ func (a *AdvancedAgent) Run(ctx context.Context) error {
 				break // 没有工具调用，退出循环
 			}
 
-			logger.Info("检测到工具调用", zap.Int("数量", len(extractedTools)))
+			logger.Debug("检测到工具调用", zap.Int("数量", len(extractedTools)))
 
 			// 处理工具调用
 			responses := tools.ExecuteTools(ctx, extractedTools, a)
 
-			logger.Info("工具调用执行完成", zap.Int("响应数量", len(responses)))
+			logger.Debug("工具调用执行完成", zap.Int("响应数量", len(responses)))
 
 			// 将工具调用结果添加到对话历史
 			toolResponseMsg := Message{
@@ -163,14 +161,12 @@ func (a *AdvancedAgent) Run(ctx context.Context) error {
 			}
 			a.conversation = append(a.conversation, toolResponseMsg)
 
-			logger.Info("工具响应已添加到对话历史")
 			logger.Debug("工具响应内容", zap.String("内容", toolResponseMsg.Content))
 
 			// 再次调用模型获取回复
 			message, err = a.runInference(ctx, a.conversation)
 			if err != nil {
 				logger.Error("模型推理失败", zap.Error(err))
-				fmt.Printf("\u001b[91m错误\u001b[0m: %v\n", err)
 				break
 			}
 		}
@@ -179,7 +175,7 @@ func (a *AdvancedAgent) Run(ctx context.Context) error {
 		a.conversation = append(a.conversation, message)
 
 		// 打印模型回复
-		fmt.Printf("\u001b[93mGLM-4.5-Flash\u001b[0m: %s\n", message.Content)
+		fmt.Printf("\u001b[93m Vcode \u001b[0m: %s\n", message.Content)
 	}
 
 	return nil
@@ -189,7 +185,7 @@ func (a *AdvancedAgent) Run(ctx context.Context) error {
 func (a *AdvancedAgent) runInference(_ctx context.Context, conversation []Message) (Message, error) {
 	// 构建请求体
 	requestBody := map[string]interface{}{
-		"model":    "glm-4.5", // 使用GLM-4.5-Flash模型
+		"model":    "glm-4.5-flash", // 使用GLM-4.5-Flash模型
 		"messages": conversation,
 		"thinking": map[string]string{
 			"type": "enabled", // 启用动态思考模式
@@ -201,8 +197,7 @@ func (a *AdvancedAgent) runInference(_ctx context.Context, conversation []Messag
 	client := req.C()
 
 	// 发送请求到智谱API
-	logger.Info("正在发送请求到智谱API")
-	fmt.Println("正在发送请求到智谱API...")
+	logger.Debug("正在发送请求到智谱API")
 	resp, err := client.R().
 		SetHeader("Authorization", "Bearer "+a.config.APIKey).
 		SetHeader("Content-Type", "application/json").
@@ -211,13 +206,11 @@ func (a *AdvancedAgent) runInference(_ctx context.Context, conversation []Messag
 
 	if err != nil {
 		logger.Error("API请求错误", zap.Error(err))
-		fmt.Printf("API请求错误: %v\n", err)
 		return Message{}, err
 	}
 
 	// 打印响应状态码
-	logger.Info("API响应状态码", zap.Int("状态码", resp.StatusCode))
-	fmt.Printf("API响应状态码: %d\n", resp.StatusCode)
+	logger.Debug("API响应状态码", zap.Int("状态码", resp.StatusCode))
 
 	// 获取原始响应内容用于调试
 	rawBody, _ := resp.ToBytes()
@@ -225,8 +218,6 @@ func (a *AdvancedAgent) runInference(_ctx context.Context, conversation []Messag
 	// 检查HTTP状态码
 	if resp.StatusCode != 200 {
 		logger.Error("API返回错误状态码", zap.Int("状态码", resp.StatusCode), zap.String("错误响应", string(rawBody)))
-		fmt.Printf("API返回错误状态码: %d\n", resp.StatusCode)
-		fmt.Printf("错误响应: %s\n", string(rawBody))
 		return Message{}, fmt.Errorf("API返回错误状态码: %d", resp.StatusCode)
 	}
 
@@ -245,29 +236,23 @@ func (a *AdvancedAgent) runInference(_ctx context.Context, conversation []Messag
 	err = resp.UnmarshalJson(&response)
 	if err != nil {
 		logger.Error("解析API响应失败", zap.Error(err), zap.String("原始响应", string(rawBody)))
-		fmt.Printf("解析API响应失败: %v\n", err)
 		return Message{}, fmt.Errorf("解析API响应失败: %v, 原始响应: %s", err, string(rawBody))
 	}
 
 	// 检查是否有API错误
 	if response.Error.Message != "" {
 		logger.Error("API错误", zap.String("消息", response.Error.Message), zap.String("类型", response.Error.Type), zap.String("代码", response.Error.Code))
-		fmt.Printf("API错误: %s (类型: %s, 代码: %s)\n",
-			response.Error.Message, response.Error.Type, response.Error.Code)
-		return Message{}, fmt.Errorf("API错误: %s (类型: %s, 代码: %s)",
-			response.Error.Message, response.Error.Type, response.Error.Code)
+		return Message{}, fmt.Errorf("API错误: %s (类型: %s, 代码: %s)",response.Error.Message, response.Error.Type, response.Error.Code)
 	}
 
 	// 检查是否有有效回复
 	if len(response.Choices) == 0 {
 		logger.Error("API返回了空的choices数组")
-		fmt.Println("API返回了空的choices数组")
 		return Message{}, fmt.Errorf("API返回了空回复")
 	}
 
 	// 打印模型返回的原始内容用于调试
 	logger.Debug("模型返回的原始内容", zap.String("内容", response.Choices[0].Message.Content))
-	fmt.Printf("\u001b[96m调试\u001b[0m: 模型返回的原始内容:\n%s\n", response.Choices[0].Message.Content)
 
 	return response.Choices[0].Message, nil
 }
