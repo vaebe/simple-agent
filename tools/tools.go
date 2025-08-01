@@ -42,6 +42,8 @@ func ExecuteTools(ctx context.Context, tools []Tool, executor ToolExecutor) []To
 
 // ExtractTools 从模型回复中提取工具调用
 func ExtractTools(content string) ([]Tool, bool) {
+	fmt.Printf("\u001b[96m调试\u001b[0m: 开始提取工具调用，内容长度: %d\n", len(content))
+
 	// 查找工具调用的JSON格式 - 支持多种格式
 	var jsonStr string
 
@@ -50,6 +52,7 @@ func ExtractTools(content string) ([]Tool, bool) {
 		end := strings.Index(content[start:], "```")
 		if end != -1 {
 			jsonStr = strings.TrimSpace(content[start+7 : start+end])
+			fmt.Printf("\u001b[96m调试\u001b[0m: 找到```json格式的JSON\n")
 		}
 	}
 
@@ -59,6 +62,7 @@ func ExtractTools(content string) ([]Tool, bool) {
 			end := strings.Index(content[start:], "```")
 			if end != -1 {
 				jsonStr = strings.TrimSpace(content[start+3 : start+end])
+				fmt.Printf("\u001b[96m调试\u001b[0m: 找到```格式的JSON\n")
 			}
 		}
 	}
@@ -84,6 +88,7 @@ func ExtractTools(content string) ([]Tool, bool) {
 			}
 			if end > start {
 				jsonStr = strings.TrimSpace(content[start:end])
+				fmt.Printf("\u001b[96m调试\u001b[0m: 找到JSON数组格式\n")
 			}
 		}
 	}
@@ -108,27 +113,35 @@ func ExtractTools(content string) ([]Tool, bool) {
 			}
 			if end > start {
 				jsonStr = strings.TrimSpace(content[start:end])
+				fmt.Printf("\u001b[96m调试\u001b[0m: 找到单个JSON对象格式\n")
 			}
 		}
 	}
 
 	if jsonStr == "" {
+		fmt.Printf("\u001b[96m调试\u001b[0m: 未找到任何JSON格式的工具调用\n")
 		return nil, false
 	}
+
+	fmt.Printf("\u001b[96m调试\u001b[0m: 提取到的JSON字符串: %s\n", jsonStr)
 
 	// 解析JSON
 	var tools []Tool
 	err := json.Unmarshal([]byte(jsonStr), &tools)
 	if err != nil {
+		fmt.Printf("\u001b[96m调试\u001b[0m: 解析JSON数组失败，尝试解析单个工具: %v\n", err)
 		// 尝试解析单个工具
 		var singleTool Tool
 		err = json.Unmarshal([]byte(jsonStr), &singleTool)
 		if err != nil {
-			fmt.Printf("错误: 无法解析工具调用: %s\n", err)
+			fmt.Printf("\u001b[91m错误\u001b[0m: 无法解析工具调用: %s\n", err)
 			fmt.Printf("原始JSON: %s\n", jsonStr)
 			return nil, false
 		}
 		tools = []Tool{singleTool}
+		fmt.Printf("\u001b[96m调试\u001b[0m: 成功解析单个工具\n")
+	} else {
+		fmt.Printf("\u001b[96m调试\u001b[0m: 成功解析工具数组，数量: %d\n", len(tools))
 	}
 
 	return tools, len(tools) > 0
@@ -176,14 +189,22 @@ func HandleToolCall(ctx context.Context, command string, executor ToolExecutor) 
 
 // FormatToolResponses 格式化工具调用结果
 func FormatToolResponses(responses []ToolCallResponse) string {
-	result := ""
+	result := "工具执行结果:\n"
+	result += "==============\n\n"
 
 	for i, resp := range responses {
-		result += fmt.Sprintf("工具调用 %d 结果:\n", i+1)
-		result += fmt.Sprintf("输出: %s\n", resp.Result)
+		result += fmt.Sprintf("工具调用 %d:\n", i+1)
+		result += fmt.Sprintf("状态: %s\n", func() string {
+			if resp.Error != "" {
+				return "失败"
+			}
+			return "成功"
+		}())
 
 		if resp.Error != "" {
-			result += fmt.Sprintf("错误: %s\n", resp.Error)
+			result += fmt.Sprintf("错误信息: %s\n", resp.Error)
+		} else {
+			result += fmt.Sprintf("执行结果:\n%s\n", resp.Result)
 		}
 
 		result += "\n"
