@@ -1,6 +1,7 @@
-# Simple Agent - 基于智谱AI GLM-4.5-Flash的智能助手
+# Simple Agent
 
-这是一个基于智谱AI GLM-4.5-Flash模型的智能助手，具备强大的推理能力、稳定的代码生成和多工具协同处理能力。
+- 参考 https://ampcode.com/how-to-build-an-agent 实现
+- 这是一个基于智谱AI GLM-4.5-Flash模型的智能助手
 
 ## 🚀 主要特性
 
@@ -125,5 +126,6 @@ MIT License
 
 ## 🔗 相关链接
 
+- [How to build an agent](https://ampcode.com/how-to-build-an-agent)
 - [智谱AI GLM-4.5-Flash文档](https://docs.bigmodel.cn/cn/guide/models/free/glm-4.5-flash)
 - [智谱AI智能体API文档](https://docs.bigmodel.cn/api-reference/agent-api/%E6%99%BA%E8%83%BD%E4%BD%93%E5%AF%B9%E8%AF%9D)
