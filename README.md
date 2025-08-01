@@ -1,126 +1,129 @@
-# Simple Agent
+# Simple Agent - 基于智谱AI GLM-4.5-Flash的智能助手
 
-这是一个基于智谱GLM-4.5模型的简单AI代理，可以处理文本对话并执行文件操作和Shell命令。
+这是一个基于智谱AI GLM-4.5-Flash模型的智能助手，具备强大的推理能力、稳定的代码生成和多工具协同处理能力。
 
-## 功能特点
+## 🚀 主要特性
 
-- 基于智谱GLM-4.5大语言模型的对话能力
-- 支持文件操作（列表、读取、写入）
-- 支持执行Shell命令
-- 工具调用功能，允许模型自主选择和使用工具
+- **GLM-4.5-Flash模型**: 使用智谱AI最新的GLM-4.5-Flash模型，具备128K上下文窗口
+- **智能工具调用**: 支持文件操作和Shell命令执行
+- **思考模式**: 启用动态思考模式，提供更深层次的推理分析
+- **安全保护**: 内置安全检查机制，防止危险操作
+- **流式输出**: 支持实时流式响应，提升用户交互体验
 
-## 项目结构
+## 📋 功能列表
 
-```
-.
-├── main.go         # 主程序入口
-├── agent.go        # 代理核心实现
-├── message.go      # 消息结构和常量定义
-├── mcp_client.go   # 文件操作客户端
-└── go.mod          # Go模块定义
-```
+### 核心能力
+- 智能问答和对话
+- 复杂推理和问题解决
+- 代码生成和调试
+- 文件操作（列出、读取、写入）
+- Shell命令执行（带安全检查）
 
-## 安装和使用
+### 工具支持
+1. **文件操作工具**
+   - `list`: 列出目录内容
+   - `read`: 读取文件内容
+   - `write`: 写入文件内容
 
-### 前提条件
+2. **Shell命令工具**
+   - `execute`: 执行Shell命令（带安全检查）
 
+## 🔧 安装和配置
+
+### 环境要求
 - Go 1.16 或更高版本
 - 智谱AI API密钥
 
-### 安装
+### 安装步骤
 
-1. 克隆仓库
-
+1. 克隆项目
 ```bash
-git clone https://github.com/yourusername/simple-agent.git
+git clone <repository-url>
 cd simple-agent
 ```
 
 2. 安装依赖
-
 ```bash
 go mod tidy
 ```
 
-### 配置
-
-设置智谱AI API密钥环境变量：
-
+3. 设置API密钥
 ```bash
 export ZHIPU_API_KEY=your_api_key_here
 ```
 
-### 运行
-
+4. 运行程序
 ```bash
 go run .
 ```
 
-## 使用方法
+## 🛡️ 安全特性
+
+### 文件操作安全
+- 禁止访问上级目录（`..`）
+- 禁止访问绝对路径（`/`开头）
+- 文件读取大小限制（最大1MB）
+
+### Shell命令安全
+- 禁止执行危险命令（`rm -rf`、`sudo`、`su`等）
+- 命令执行超时限制（30秒）
+- 输入验证和清理
+
+## 📖 使用示例
 
 ### 基本对话
-
-直接输入文本与代理对话。
-
-### 工具调用
-
-代理可以自动识别需要使用工具的请求，并调用相应的工具。
-
-### 手动工具调用
-
-你也可以手动调用工具：
-
 ```
-/tool file_operation list [目录路径]
-/tool file_operation read [文件路径]
-/tool file_operation write [文件路径] [内容]
-/tool shell_command execute [命令]
-```
-
-## 示例
-
-```
-与GLM-4.5聊天 (使用'ctrl-c'退出)
 你: 你好，请介绍一下你自己
-GLM-4.5: 你好！我是由智谱AI开发的GLM-4.5大语言模型。我可以帮助你回答问题、提供信息、进行对话，以及使用各种工具来完成特定任务。
+GLM-4.5-Flash: 你好！我是基于智谱AI GLM-4.5-Flash模型的智能助手...
+```
 
-我的能力包括：
-1. 回答各种知识性问题
-2. 协助编写和审查文本内容
-3. 使用文件操作工具来管理文件
-4. 执行Shell命令来完成系统操作
-
-有什么我可以帮助你的吗？
-
+### 文件操作
+```
 你: 请列出当前目录的内容
-GLM-4.5: 我将为你列出当前目录的内容。
+GLM-4.5-Flash: 我将使用文件操作工具来列出当前目录的内容。
 
-```json
-[
-  {
-    "type": "file_operation",
-    "name": "list",
-    "args": {
-      "path": "."
-    },
-    "thought": "用户想要查看当前目录的内容，我应该使用file_operation工具的list功能。"
+[工具调用]
+{
+  "type": "file_operation",
+  "name": "list",
+  "args": {
+    "path": "."
   }
-]
+}
 ```
 
-工具调用结果:
-目录 /path/to/current/directory 的内容:
-- agent.go (文件)
-- go.mod (文件)
-- go.sum (文件)
-- main.go (文件)
-- mcp_client.go (文件)
-- message.go (文件)
-- README.md (文件)
+### Shell命令
+```
+你: 请查看当前系统的内存使用情况
+GLM-4.5-Flash: 我将执行命令来查看系统内存使用情况。
 
-这是当前目录中的所有文件。你可以看到项目的主要Go源代码文件、Go模块文件以及README文档。需要我解释其中任何文件的用途吗？
+[工具调用]
+{
+  "type": "shell_command",
+  "name": "execute",
+  "args": {
+    "command": "free -h"
+  }
+}
 ```
 
-## 许可证
+## 📝 配置说明
 
-MIT
+### 环境变量
+- `ZHIPU_API_KEY`: 智谱AI API密钥（必需）
+
+### 系统提示词
+可以在 `message.go` 中修改 `DEFAULT_SYSTEM_PROMPT` 来自定义系统行为。
+
+## 🤝 贡献
+
+欢迎提交Issue和Pull Request来改进这个项目！
+
+## 📄 许可证
+
+MIT License
+
+## 🔗 相关链接
+
+- [智谱AI GLM-4.5-Flash文档](https://docs.bigmodel.cn/cn/guide/models/free/glm-4.5-flash)
+- [智谱AI智能体API文档](https://docs.bigmodel.cn/api-reference/agent-api/%E6%99%BA%E8%83%BD%E4%BD%93%E5%AF%B9%E8%AF%9D)

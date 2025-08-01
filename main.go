@@ -63,13 +63,17 @@ func getUserInput() (string, bool) {
 		return "", false
 	}
 
-	// 去除输入末尾的换行符
-	input = strings.TrimSuffix(input, "\n")
-	input = strings.TrimSuffix(input, "\r")
+	// 去除输入末尾的换行符和空格
+	input = strings.TrimSpace(input)
 
 	// 检查是否是退出命令
 	if input == "exit" || input == "quit" {
 		return "", false
+	}
+
+	// 检查空输入
+	if input == "" {
+		return "", true // 返回空字符串但继续循环
 	}
 
 	return input, true

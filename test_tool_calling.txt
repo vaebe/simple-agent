@@ -1,0 +1,20 @@
+测试AI工具调用功能
+
+请按照以下步骤测试：
+
+1. 首先测试文件创建功能：
+   "创建一个名为test.js的文件，内容为console.log('Hello from AI agent!')"
+
+2. 然后测试文件读取功能：
+   "读取test.js文件的内容"
+
+3. 最后测试文件修改功能：
+   "修改test.js文件，将内容改为console.log('Hello from AI agent - updated!')"
+
+4. 测试Shell命令执行：
+   "执行命令：node test.js"
+
+这些测试将验证AI是否能正确：
+- 识别需要使用工具的情况
+- 生成正确的JSON格式工具调用
+- 执行工具调用并返回结果 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/imroc/req/v3"
 )
@@ -60,9 +61,77 @@ type ToolCallResponse struct {
 	Error  string `json:"error"`  // 错误信息（如果有）
 }
 
+// 定义可用工具
+var availableTools = []map[string]interface{}{
+	{
+		"type":        "file_operation",
+		"name":        "list",
+		"description": "列出指定目录的内容",
+		"parameters": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path": map[string]interface{}{
+					"type":        "string",
+					"description": "要列出内容的目录路径",
+					"default":     ".",
+				},
+			},
+		},
+	},
+	{
+		"type":        "file_operation",
+		"name":        "read",
+		"description": "读取指定文件的内容",
+		"parameters": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path": map[string]interface{}{
+					"type":        "string",
+					"description": "要读取的文件路径",
+				},
+			},
+			"required": []string{"path"},
+		},
+	},
+	{
+		"type":        "file_operation",
+		"name":        "write",
+		"description": "写入内容到指定文件",
+		"parameters": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"path": map[string]interface{}{
+					"type":        "string",
+					"description": "要写入的文件路径",
+				},
+				"content": map[string]interface{}{
+					"type":        "string",
+					"description": "要写入的文件内容",
+				},
+			},
+			"required": []string{"path", "content"},
+		},
+	},
+	{
+		"type":        "shell_command",
+		"name":        "execute",
+		"description": "执行Shell命令",
+		"parameters": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"command": map[string]interface{}{
+					"type":        "string",
+					"description": "要执行的Shell命令",
+				},
+			},
+			"required": []string{"command"},
+		},
+	},
+}
+
 // Run 运行高级代理的主循环
 func (a *AdvancedAgent) Run(ctx context.Context) error {
-	fmt.Println("与GLM-4.5聊天 (使用'ctrl-c'退出)")
+	fmt.Println("与GLM-4.5-Flash聊天 (使用'ctrl-c'退出)")
 	fmt.Println("可用工具: " + strings.Join(a.config.Tools, ", "))
 
 	for {
@@ -72,6 +141,9 @@ func (a *AdvancedAgent) Run(ctx context.Context) error {
 		if !ok {
 			break
 		}
+
+		// 清除当前行，重新打印用户输入（用于更好的显示效果）
+		fmt.Printf("\r\u001b[94m你\u001b[0m: %s\n", userInput)
 
 		// 检查是否是工具调用
 		if strings.HasPrefix(userInput, "/tool") {
@@ -87,7 +159,8 @@ func (a *AdvancedAgent) Run(ctx context.Context) error {
 		// 调用模型获取回复
 		message, err := a.runInference(ctx, a.conversation)
 		if err != nil {
-			return err
+			fmt.Printf("\u001b[91m错误\u001b[0m: %v\n", err)
+			continue
 		}
 
 		// 检查回复中是否包含工具调用
@@ -106,7 +179,8 @@ func (a *AdvancedAgent) Run(ctx context.Context) error {
 			// 再次调用模型获取最终回复
 			message, err = a.runInference(ctx, a.conversation)
 			if err != nil {
-				return err
+				fmt.Printf("\u001b[91m错误\u001b[0m: %v\n", err)
+				continue
 			}
 		}
 
@@ -124,11 +198,12 @@ func (a *AdvancedAgent) Run(ctx context.Context) error {
 func (a *AdvancedAgent) runInference(ctx context.Context, conversation []Message) (Message, error) {
 	// 构建请求体
 	requestBody := map[string]interface{}{
-		"model":    "glm-4.5", // 使用GLM-4.5模型
+		"model":    "glm-4.5", // 使用GLM-4.5-Flash模型
 		"messages": conversation,
 		"thinking": map[string]string{
 			"type": "enabled", // 启用动态思考模式
 		},
+		"stream": false, // 暂时不使用流式输出
 	}
 
 	// 创建HTTP客户端
@@ -152,8 +227,13 @@ func (a *AdvancedAgent) runInference(ctx context.Context, conversation []Message
 
 	// 获取原始响应内容用于调试
 	rawBody, _ := resp.ToBytes()
-	// fmt.Println("API响应内容:")
-	fmt.Println(string(rawBody))
+
+	// 检查HTTP状态码
+	if resp.StatusCode != 200 {
+		fmt.Printf("API返回错误状态码: %d\n", resp.StatusCode)
+		fmt.Printf("错误响应: %s\n", string(rawBody))
+		return Message{}, fmt.Errorf("API返回错误状态码: %d", resp.StatusCode)
+	}
 
 	// 解析响应
 	var response struct {
@@ -232,26 +312,93 @@ func (a *AdvancedAgent) handleToolCall(ctx context.Context, command string) {
 
 // extractTools 从模型回复中提取工具调用
 func (a *AdvancedAgent) extractTools(content string) ([]Tool, bool) {
-	// 查找工具调用的JSON格式
-	start := strings.Index(content, "```json")
-	if start == -1 {
-		return nil, false
+	// 查找工具调用的JSON格式 - 支持多种格式
+	var jsonStr string
+
+	// 尝试查找```json格式
+	if start := strings.Index(content, "```json"); start != -1 {
+		end := strings.Index(content[start:], "```")
+		if end != -1 {
+			jsonStr = strings.TrimSpace(content[start+7 : start+end])
+		}
 	}
 
-	end := strings.Index(content[start:], "```")
-	if end == -1 {
-		return nil, false
+	// 如果没有找到```json，尝试查找普通的```格式
+	if jsonStr == "" {
+		if start := strings.Index(content, "```"); start != -1 {
+			end := strings.Index(content[start:], "```")
+			if end != -1 {
+				jsonStr = strings.TrimSpace(content[start+3 : start+end])
+			}
+		}
 	}
 
-	// 提取JSON内容
-	jsonStr := content[start+7 : start+end]
+	// 如果没有找到代码块，尝试直接查找JSON数组
+	if jsonStr == "" {
+		// 查找以[开头的JSON数组
+		start := strings.Index(content, "[{")
+		if start != -1 {
+			// 找到匹配的结束括号
+			bracketCount := 0
+			end := start
+			for i := start; i < len(content); i++ {
+				if content[i] == '[' {
+					bracketCount++
+				} else if content[i] == ']' {
+					bracketCount--
+					if bracketCount == 0 {
+						end = i + 1
+						break
+					}
+				}
+			}
+			if end > start {
+				jsonStr = strings.TrimSpace(content[start:end])
+			}
+		}
+	}
+
+	// 如果还是没有找到，尝试查找单个工具对象
+	if jsonStr == "" {
+		start := strings.Index(content, "{")
+		if start != -1 {
+			// 找到匹配的结束括号
+			bracketCount := 0
+			end := start
+			for i := start; i < len(content); i++ {
+				if content[i] == '{' {
+					bracketCount++
+				} else if content[i] == '}' {
+					bracketCount--
+					if bracketCount == 0 {
+						end = i + 1
+						break
+					}
+				}
+			}
+			if end > start {
+				jsonStr = strings.TrimSpace(content[start:end])
+			}
+		}
+	}
+
+	if jsonStr == "" {
+		return nil, false
+	}
 
 	// 解析JSON
 	var tools []Tool
 	err := json.Unmarshal([]byte(jsonStr), &tools)
 	if err != nil {
-		fmt.Printf("错误: 无法解析工具调用: %s\n", err)
-		return nil, false
+		// 尝试解析单个工具
+		var singleTool Tool
+		err = json.Unmarshal([]byte(jsonStr), &singleTool)
+		if err != nil {
+			fmt.Printf("错误: 无法解析工具调用: %s\n", err)
+			fmt.Printf("原始JSON: %s\n", jsonStr)
+			return nil, false
+		}
+		tools = []Tool{singleTool}
 	}
 
 	return tools, len(tools) > 0
@@ -294,6 +441,11 @@ func (a *AdvancedAgent) executeFileOperation(tool Tool) ToolCallResponse {
 			dir = "."
 		}
 
+		// 安全检查：限制目录访问范围
+		if strings.Contains(dir, "..") || strings.HasPrefix(dir, "/") {
+			return ToolCallResponse{Error: "出于安全考虑，禁止访问上级目录或绝对路径"}
+		}
+
 		// 列出目录内容
 		result, err := a.mcpClient.ListDirectory(dir)
 		if err != nil {
@@ -306,6 +458,11 @@ func (a *AdvancedAgent) executeFileOperation(tool Tool) ToolCallResponse {
 		path, ok := tool.Args["path"].(string)
 		if !ok {
 			return ToolCallResponse{Error: "缺少文件路径参数"}
+		}
+
+		// 安全检查：限制文件访问范围
+		if strings.Contains(path, "..") || strings.HasPrefix(path, "/") {
+			return ToolCallResponse{Error: "出于安全考虑，禁止访问上级目录或绝对路径"}
 		}
 
 		// 读取文件内容
@@ -328,6 +485,11 @@ func (a *AdvancedAgent) executeFileOperation(tool Tool) ToolCallResponse {
 			return ToolCallResponse{Error: "缺少文件内容参数"}
 		}
 
+		// 安全检查：限制文件写入范围
+		if strings.Contains(path, "..") || strings.HasPrefix(path, "/") {
+			return ToolCallResponse{Error: "出于安全考虑，禁止写入上级目录或绝对路径"}
+		}
+
 		// 写入文件内容
 		err := a.mcpClient.WriteFile(path, content)
 		if err != nil {
@@ -348,12 +510,28 @@ func (a *AdvancedAgent) executeShellCommand(tool Tool) ToolCallResponse {
 		return ToolCallResponse{Error: "缺少命令参数"}
 	}
 
+	// 安全检查：禁止执行危险命令
+	dangerousCommands := []string{"rm -rf", "sudo", "su", "chmod 777", "dd if=", "> /dev/"}
+	for _, dangerous := range dangerousCommands {
+		if strings.Contains(strings.ToLower(cmdStr), strings.ToLower(dangerous)) {
+			return ToolCallResponse{Error: fmt.Sprintf("出于安全考虑，禁止执行命令: %s", cmdStr)}
+		}
+	}
+
 	// 创建命令
 	cmd := exec.Command("sh", "-c", cmdStr)
+
+	// 设置超时上下文
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd = exec.CommandContext(ctx, "sh", "-c", cmdStr)
 
 	// 获取输出
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return ToolCallResponse{Error: "命令执行超时"}
+		}
 		return ToolCallResponse{
 			Result: string(output),
 			Error:  err.Error(),

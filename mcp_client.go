@@ -40,6 +40,8 @@ func (c *MCPClient) ListDirectory(path string) (string, error) {
 	// 格式化输出
 	var result strings.Builder
 	result.WriteString(fmt.Sprintf("目录 %s 的内容:\n", path))
+	result.WriteString("名称\t类型\t大小\n")
+	result.WriteString("----\t----\t----\n")
 
 	for _, file := range files {
 		fileType := "文件"
@@ -47,7 +49,15 @@ func (c *MCPClient) ListDirectory(path string) (string, error) {
 			fileType = "目录"
 		}
 
-		result.WriteString(fmt.Sprintf("%s\t%s\t%d bytes\n", file.Name(), fileType, file.Size()))
+		size := file.Size()
+		sizeStr := fmt.Sprintf("%d bytes", size)
+		if size > 1024*1024 {
+			sizeStr = fmt.Sprintf("%.2f MB", float64(size)/1024/1024)
+		} else if size > 1024 {
+			sizeStr = fmt.Sprintf("%.2f KB", float64(size)/1024)
+		}
+
+		result.WriteString(fmt.Sprintf("%s\t%s\t%s\n", file.Name(), fileType, sizeStr))
 	}
 
 	return result.String(), nil
@@ -64,6 +74,12 @@ func (c *MCPClient) ReadFile(path string) (string, error) {
 	// 检查是否是文件
 	if info.IsDir() {
 		return "", fmt.Errorf("%s 是一个目录，不是文件", path)
+	}
+
+	// 检查文件大小（限制为1MB）
+	const maxFileSize = 1024 * 1024 // 1MB
+	if info.Size() > maxFileSize {
+		return "", fmt.Errorf("文件 %s 太大 (%d bytes)，最大支持 1MB", path, info.Size())
 	}
 
 	// 读取文件内容
