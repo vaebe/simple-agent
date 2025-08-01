@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"simple-agent/tools"
 	"strings"
 	"syscall"
 )
@@ -36,7 +37,7 @@ func main() {
 	config := AgentConfig{
 		APIKey:       apiKey,
 		SystemPrompt: DEFAULT_SYSTEM_PROMPT,
-		Tools:        []string{TOOL_FILE_OPERATION, TOOL_SHELL_COMMAND},
+		Tools:        []string{tools.TOOL_FILE_OPERATION, tools.TOOL_SHELL_COMMAND},
 	}
 
 	// 创建代理实例
